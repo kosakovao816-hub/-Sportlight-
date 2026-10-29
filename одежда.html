@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotlight: Clothes Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap');
+
+        :root {
+            --bg-color: #e0f7fa;
+            --card-bg: #ffffff;
+            --primary: #ff7043;
+            --correct: #4caf50;
+            --wrong: #f44336;
+            --text: #37474f;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(#b2ebf2 20%, transparent 20%), radial-gradient(#b2ebf2 20%, transparent 20%);
+            background-position: 0 0, 10px 10px;
+            background-size: 20px 20px;
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .game-container {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #78909c;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #cfd8dc;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .image-display {
+            height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 8rem; /* Размер эмодзи */
+            user-select: none;
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1));
+            transition: transform 0.3s ease;
+        }
+
+        .image-display.pop {
+            animation: pop 0.5s ease;
+        }
+
+        .question-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .option-btn {
+            background-color: #f5f5f5;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 15px;
+            font-size: 1.3rem;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: capitalize;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background-color: #fff3e0;
+            border-color: #ffcc80;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .option-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .option-btn.correct {
+            background-color: #e8f5e9;
+            border-color: var(--correct);
+            color: var(--correct);
+            transform: scale(1.05);
+        }
+
+        .option-btn.wrong {
+            background-color: #ffebee;
+            border-color: var(--wrong);
+            color: var(--wrong);
+            animation: shake 0.4s;
+        }
+
+        .feedback {
+            height: 40px;
+            margin-top: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .next-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: none;
+            margin: 20px auto 0;
+            box-shadow: 0 5px 15px rgba(255, 112, 67, 0.4);
+        }
+
+        .next-btn:hover {
+            background-color: #f4511e;
+            transform: scale(1.05);
+        }
+
+        .score-badge {
+            display: inline-block;
+            background-color: #fff9c4;
+            color: #f57f17;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 1.2rem;
+        }
+
+        /* Анимации */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-8px); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Финальный экран */
+        .end-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        
+        .end-emoji {
+            font-size: 6rem;
+            margin-bottom: 1rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="game-container">
+    <div class="header">
+        <div>Вопрос <span id="current-q">1</span>/<span id="total-q">10</span></div>
+        <div class="score-badge">⭐ <span id="score">0</span></div>
+    </div>
+
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <div class="image-display" id="item-image">
+        👕
+    </div>
+
+    <div class="question-text" id="question-text">What is it?</div>
+
+    <div class="options" id="options-container">
+        <!-- Кнопки добавляются через JS -->
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+    
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next ➔</button>
+</div>
+
+<script>
+    // База слов (по темам Spotlight)
+    const vocabulary = [
+        { en: "T-shirt", emoji: "👕" },
+        { en: "Jacket", emoji: "🧥" },
+        { en: "Jeans", emoji: "👖" },
+        { en: "Skirt", emoji: "👗" },
+        { en: "Shoes", emoji: "👟" },
+        { en: "Hat", emoji: "🎩" },
+        { en: "Scarf", emoji: "🧣" },
+        { en: "Gloves", emoji: "🧤" },
+        { en: "Socks", emoji: "🧦" },
+        { en: "Dress", emoji: "👘" },
+        { en: "Shorts", emoji: "🩳" },
+        { en: "Sweater", emoji: "🧶" },
+        { en: "Coat", emoji: "🧥" },
+        { en: "Boots", emoji: "👢" },
+        { en: "Suit", emoji: "👔" }
+    ];
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let questions = [];
+    const totalQuestions = 10;
+
+    // --- Звуковые эффекты (Web Audio API) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        if (type === 'correct') {
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+            oscillator.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.1); // C6
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.3);
+        } else if (type === 'wrong') {
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.3);
+        } else if (type === 'win') {
+            // Мелодия победы
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0, audioCtx.currentTime + i * 0.15);
+                gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + i * 0.15 + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.15 + 0.4);
+                osc.start(audioCtx.currentTime + i * 0.15);
+                osc.stop(audioCtx.currentTime + i * 0.15 + 0.4);
+            });
+        }
+    }
+
+    // Перемешивание массива
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    // Инициализация игры
+    function initGame() {
+        const shuffledVocab = shuffle([...vocabulary]).slice(0, totalQuestions);
+        
+        questions = shuffledVocab.map(correctItem => {
+            let wrongOptions = vocabulary.filter(item => item.en !== correctItem.en);
+            wrongOptions = shuffle(wrongOptions).slice(0, 3);
+            let options = shuffle([correctItem, ...wrongOptions]);
+            
+            return {
+                correct: correctItem,
+                options: options
+            };
+        });
+
+        document.getElementById('total-q').textContent = totalQuestions;
+        loadQuestion();
+    }
+
+    // Загрузка вопроса
+    function loadQuestion() {
+        const currentQ = questions[currentQuestionIndex];
+        
+        // Обновляем прогресс
+        document.getElementById('current-q').textContent = currentQuestionIndex + 1;
+        const progressPercent = ((currentQuestionIndex) / totalQuestions) * 100;
+        document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+
+        // Анимация картинки
+        const imgEl = document.getElementById('item-image');
+        imgEl.classList.remove('pop');
+        void imgEl.offsetWidth; // Триггер перерисовки
+        imgEl.textContent = currentQ.correct.emoji;
+        imgEl.classList.add('pop');
+        
+        // Сбрасываем UI
+        document.getElementById('feedback').textContent = '';
+        document.getElementById('next-btn').style.display = 'none';
+        
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+
+        // Создаем кнопки
+        currentQ.options.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = option.en;
+            btn.onclick = () => checkAnswer(btn, option.en, currentQ.correct.en);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    // Проверка ответа
+    function checkAnswer(selectedBtn, selectedWord, correctWord) {
+        const allBtns = document.querySelectorAll('.option-btn');
+        allBtns.forEach(btn => btn.disabled = true);
+
+        const feedbackEl = document.getElementById('feedback');
+
+        if (selectedWord === correctWord) {
+            selectedBtn.classList.add('correct');
+            feedbackEl.textContent = 'Excellent! 🎉';
+            feedbackEl.style.color = 'var(--correct)';
+            score++;
+            document.getElementById('score').textContent = score;
+            playSound('correct');
+        } else {
+            selectedBtn.classList.add('wrong');
+            feedbackEl.textContent = 'Oops! Try again next time 😔';
+            feedbackEl.style.color = 'var(--wrong)';
+            playSound('wrong');
+            
+            // Подсвечиваем правильный ответ
+            allBtns.forEach(btn => {
+                if (btn.textContent === correctWord) {
+                    btn.classList.add('correct');
+                }
+            });
+        }
+
+        // Показываем кнопку "Далее"
+        const nextBtn = document.getElementById('next-btn');
+        nextBtn.style.display = 'block';
+        
+        // Если это был последний вопрос, меняем текст кнопки
+        if (currentQuestionIndex === totalQuestions - 1) {
+            nextBtn.textContent = 'Finish 🏁';
+        } else {
+            nextBtn.textContent = 'Next ➔';
+        }
+    }
+
+    // Следующий вопрос
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < totalQuestions) {
+            loadQuestion();
+        } else {
+            endGame();
+        }
+    }
+
+    // Конец игры
+    function endGame() {
+        const container = document.getElementById('game-container');
+        playSound('win');
+        
+        let message = "";
+        let emoji = "";
+        let color = "";
+        
+        if (score === totalQuestions) {
+            message = "Perfect! You are a superstar!";
+            emoji = "🏆";
+            color = "#ffd54f";
+        } else if (score >= totalQuestions * 0.7) {
+            message = "Great job! Well done!";
+            emoji = "🌟";
+            color = "#81c784";
+        } else {
+            message = "Good try! Let's practice more.";
+            emoji = "📚";
+            color = "#64b5f6";
+        }
+
+        container.innerHTML = `
+            <div class="end-screen">
+                <div class="end-emoji" style="animation: pop 0.5s ease;">${emoji}</div>
+                <h2 style="color: ${color}; font-size: 2.5rem; margin-bottom: 10px;">Game Over!</h2>
+                <p style="font-size: 1.5rem; margin-bottom: 20px;">Your score: <strong>${score} / ${totalQuestions}</strong></p>
+                <p style="font-size: 1.2rem; color: #78909c;">${message}</p>
+                <button class="next-btn" style="display: block; margin-top: 30px; background-color: ${color}; box-shadow: 0 5px 15px ${color}66;" onclick="location.reload()">Play Again 🔄</button>
+            </div>
+        `;
+    }
+
+    // Запуск
+    initGame();
+
+</script>
+</body>
+</html>
